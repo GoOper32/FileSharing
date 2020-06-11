@@ -1,5 +1,5 @@
 /*
-* Простой FTP-сервер б
+* Простой HTTP-сервер б
 * Базовая комплектация
 */
 #include "Header.h"
@@ -21,7 +21,7 @@ void ACCEPT(int mumber_connection) {
 	std::cout << "From client " << inet_ntoa(clnt_addr[mumber_connection].scaddr.sin_addr) << ":" << ntohs(clnt_addr[mumber_connection].scaddr.sin_port) << endl;
 
 	// Отсылаем вводную информацию о сервере
-	send_string(SCLs[mumber_connection], "* * * Welcome to simple FTP-server * * *\r\n");
+	send_string(SCLs[mumber_connection], "* * * Welcome to simple HTTP-server * * *\r\n");
 
 	char msg[1024] = { 0 };
 	int sizeMessage = 0;
@@ -170,7 +170,7 @@ int main(void)
 	/*IMPORTANT VARIABLES*/
 
 
-	std::cout << "FTP SERVER - " << ServName << endl;
+	std::cout << "HTTP SERVER - " << ServName << endl;
 	
 	BIND(S, serv_addr);
 	
