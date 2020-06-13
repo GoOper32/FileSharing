@@ -1,0 +1,2 @@
+C:\Users\vipgo\source\repos\ServerV2_0\Debug\ServerV2_0.exe
+C:\Users\vipgo\source\repos\ServerV2_0\Debug\ServerV2_0.pdb

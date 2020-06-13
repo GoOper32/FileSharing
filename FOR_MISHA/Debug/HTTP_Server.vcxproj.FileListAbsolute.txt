@@ -1,2 +1,0 @@
-C:\Users\vipgo\source\repos\HTTP_Server\Debug\HTTP_Server.exe
-C:\Users\vipgo\source\repos\HTTP_Server\Debug\HTTP_Server.pdb

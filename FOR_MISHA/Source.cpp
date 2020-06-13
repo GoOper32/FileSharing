@@ -1,209 +1,233 @@
 /*
-* Простой HTTP-сервер б
-* Базовая комплектация
+* Простой TCP-сервер
+* Поучает текстовую строку, преобразует ее в верхний регистр и возвращает
+* клиенту результат.
 */
-#include "Header.h"
+#include <iostream>
+#include <Winsock2.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctime>
+#include <string>
+#pragma warning(disable: 4996)
+#pragma comment(lib, "ws2_32.lib")
+
+using namespace std;
 
 
-SOCKET S;
-SOCKET SCLs[256];
-int CONNECTION = 0;
-client clnt_addr[256];
-sockaddr_in serv_addr;
-
-
-void ACCEPT(int mumber_connection) {
-	// Получаем параметры присоединенного сокета NS и информацию о клиенте
-	clnt_addr[mumber_connection].addrlen = sizeof(serv_addr);
-	getsockname(SCLs[mumber_connection], (sockaddr*)&serv_addr, &clnt_addr[mumber_connection].addrlen);
-
-	std::cout << "Accepted connection on " << inet_ntoa(serv_addr.sin_addr) << ":" << ntohs(serv_addr.sin_port) << endl;
-	std::cout << "From client " << inet_ntoa(clnt_addr[mumber_connection].scaddr.sin_addr) << ":" << ntohs(clnt_addr[mumber_connection].scaddr.sin_port) << endl;
-
-	// Отсылаем вводную информацию о сервере
-	send_string(SCLs[mumber_connection], "* * * Welcome to simple HTTP-server * * *\r\n");
-
-	char msg[1024] = { 0 };
-	int sizeMessage = 0;
-
-
- 
-	while (true)																								// Получаем и обрабатываем данные от клиента
-	{
-		sizeMessage = recv(SCLs[mumber_connection], msg, sizeof(msg) - 1, 0);
-		// В случае ошибки (например, отсоединения клиента) выходим
-		if (sizeMessage <= 0) break;
-		// Мы получаем поток байт, поэтому нужно самостоятельно
-		// добавить завержающий 0 для ASCII строки
-		//sReceiveBuffer[nReaded] = 0;
-		// Отбрасываем символы превода строк
-		for (char* pPtr = msg; *pPtr != 0; pPtr++)
-		{
-			if (*pPtr == '\n' || *pPtr == '\r')
-			{
-				*pPtr = 0;
-				break;
-			}
-		}
-		
-		// Пропускаем пустые строки
-		if (msg[0] == 0) continue;
-
-		for (int i = 0; i < 1023 && msg[i + 1] != 0; i++) {
-			if (msg[i] == ' ') {
-				for (int j = i; j < 1023; j++) {
-					msg[j] = msg[j + 1];
-				}
-				i--;
-			}
-			else break;
-		}
-		cout << "Received data : " << msg << endl;
-		
-		string msg_pars[256];
-		int count_pars_word = 0;
-		string httpV = "HTTP/1.0";
-		string status;
-		string data="\r\n";
-		string tmp;
-		//string msg_form;
-		//char cmnd[32];
-		//char path[32];
-		//sscanf(msg, "%s %s ", cmnd, path);
-
-
-		for (int i = 0; msg[i] != 0 && i < sizeof(msg);i++) {
-			if (!count_pars_word ) {
-				if (msg[i] == ' ')		continue;
-				else			count_pars_word++;
-			}
-			if (msg[i] != ' ')	
-				msg_pars[count_pars_word-1] += msg[i];
-			else	
-				count_pars_word++;
-		}
-		if (count_pars_word >= 1)
-			tmp = msg_pars[1];
-
-
-		bool info_yes = false;
-		ifstream fin;
-		tmp = msg_pars[0];
-		transform(tmp.begin(), tmp.end(), tmp.begin(), toupper);
-		if (msg_pars[0] == "USER") {
-			status = "200 Ok";
-			if(count_pars_word>=1)
-				transform(tmp.begin(), tmp.end(), tmp.begin(), toupper);
-			if (tmp == "INFO=YES") {
-				info_yes = true;
-				for (int i = 2; i < count_pars_word; i++) {
-					transform(msg_pars[i].begin(), msg_pars[i].end(), msg_pars[i].begin(), toupper);
-					if (msg_pars[i]=="HOST") 
-						data += "Host: Specifies the domain name of the site being accessed\r\n";
-					else if(msg_pars[i] == "USER-AGENT")
-						data += "User-Agent: Provides the host with information about a client application that uses a specific network Protocol\r\n";
-					else if (msg_pars[i] == "ACCEPT-LANGUAGE")
-						data += "Accept-Language: Tells the server which languages the client understands and which locale is preferred\r\n";
-					else if (msg_pars[i] == "KEEP-ALIVE")
-						data += "Keep-Alive: The shared header allows the sender a hint about how the connection can be used to set the timeout and maximum number of requests.\r\n"; 
-					else if (msg_pars[i] == "CONNECTION")
-						data += "Connection: Determines whether the network connection remains open after the current request is completed\r\n";
-					else if (msg_pars[i] == "COOKIE")
-						data += "Cookie: This is a small piece of data sent by the server to the user's browser, which the user can save and send back with a new request to this server\r\n";
-					else if (msg_pars[i] == "PRAGMA:")
-						data += "Pragma: Is an implementation of a specific header that can have various effects along the request-response chain\r\n";
-					else if (msg_pars[i] == "CACHE-CONTROL")
-						data += "Cache-Control: Used to set caching instructions for both requests and responses\r\n";
-					else if (msg_pars[i] == "DATE")
-						data += "Date: The main HTTP header containing the date and time when the message was created.\r\n"; 
-					else if (msg_pars[i] == "LAST-MODIFIED:")
-						data += "Last-Modified: Recent change.\r\n";
-					else 
-						data += msg_pars[i]+="This header is not supported.\r\n";
-				}
-			}
-			else {
-				if (msg_pars[1][0] == '/')
-					msg_pars[1].erase(msg_pars[1].begin());
-
-				fin.open(msg_pars[1]);
-
-				if (fin.is_open())
-					while (fin >> tmp) {
-						data += tmp;
-						data += "\r\n";
-					}
-				else
-					status = "404 Page Not Found";
-			}
-		}
-		else
-			status = "501 Not Implemented";
-			
-		
-		string snd = string(httpV + ' ' + status + "\r\n"+ data);
-
-		if (!info_yes)
-			send(SCLs[mumber_connection], snd.c_str(), snd.size(), 0);
-		else {
-			send(SCLs[mumber_connection], data.c_str(), data.size(), 0);
-		}
-		
+// TCP-порт сервера
+#define SERVICE_PORT 1500
+int send_string(SOCKET s, const char* sString);
+int convertTo_Int(string str) {
+	int answer = 0;
+	int multiplay = 10;
+	if(str.size())
+		answer = str[0] - '0';
+	for(int i=1;i<str.size();i++){
+		answer *= 10;
+		answer += str[i] - '0';
 	}
-	closesocket(SCLs[mumber_connection]);																							// закрываем сокет клиента
-	std::cout << "Client disonected" << endl;
+	return answer;
 }
 
+int summ(int a) {
+	int answer = (a <= 0)? 0:1;
+
+	for (int i = 0; i < a; i++) {
+		answer += i;
+	}
+	return answer;
+}
 
 int main(void)
 {
-	/*TMP VARIABLES*/
-	bool leave = false;
-	/*TMP VARIABLE*/
+	char buffer[256];
+	time_t now = time(0);
+	string time_now;
+	string str;
+	tm* ltm = localtime(&now);
 
-	/*IMPORTANT VARIABLES*/
-	WSADATA wsadata;			/*INITIALISATION*/			WSAStartup(MAKEWORD(2, 2), &wsadata);
-	string ServName;			/*INITIALISATION*/			PC_Name(ServName);
-								/*INITIALISATION*/			SockaddrStartup(serv_addr, AF_INET, INADDR_ANY, SERVICE_PORT);
-								/*INITIALISATION*/			SOCKETSturtup(S);
-	std::vector <std::thread> th_vec;
-
-	/*IMPORTANT VARIABLES*/
-
-
-	std::cout << "HTTP SERVER - " << ServName << endl;
-	
-	BIND(S, serv_addr);
-	
-	LISTEN(S, 10);
-
-	std::cout << "Listen " << inet_ntoa(serv_addr.sin_addr) << ":" << ntohs(serv_addr.sin_port) << endl;
-	std::string path = "/path/to/directory";
-	
-
-
-	while (!leave)
+	SOCKET S; //дескриптор прослушивающего сокета
+	SOCKET NS; //дескриптор присоединенного сокета
+	sockaddr_in serv_addr;
+	WSADATA wsadata;
+	char sName[128];
+	bool bTerminate = false;
+	// Инициализируем библиотеку сокетов
+	WSAStartup(MAKEWORD(2, 2), &wsadata);
+	// Пытаемся получить имя текущей машины
+	gethostname(sName, sizeof(sName));
+	printf("\nServer host: %s\n", sName);
+	// Создаем сокет
+	// Для TCP-сокета указываем параметр SOCK_STREAM
+	// Для UDP - SOCK_DGRAM
+	if ((S = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
-		//Проверяем Запросы на соединение 
-		//запретить подключения после 256 доделать!
-		SCLs[CONNECTION] = accept(S, (sockaddr*)&clnt_addr[CONNECTION].scaddr, &clnt_addr[CONNECTION].addrlen);
-		if (SCLs[CONNECTION] == INVALID_SOCKET)
-		{
-			std::cout << "ACCEPT - Error" << endl;
-		}
-		else {
-			th_vec.push_back(std::thread(ACCEPT, CONNECTION));
-			CONNECTION++;
-		}
+		fprintf(stderr, "Can't create socket\n");
+		exit(1);
 	}
-	
-	closesocket(S);																									// Закрываем серверный сокет
-	
-	WSACleanup();																									// освобождаем ресурсы библиотеки сокетов
-	return 0;	
+	// Заполняем структуру адресов
+	memset(&serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	// Разрешаем работу на всех доступных сетевых интерфейсах,
+	// в частности на localhost
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	// Обратите внимание на преобразование порядка байт
+	serv_addr.sin_port = htons((u_short)SERVICE_PORT);
+	// Связываем сокет с заданным сетевым интерфесом и портом
+	if (bind(S, (sockaddr*)&serv_addr, sizeof(serv_addr)) == INVALID_SOCKET)
+	{
+		fprintf(stderr, "Can't bind\n");
+		exit(1);
+	}
+	// Переводим сокет в режим прослушивания заданного порта
+	// с максимальным количеством ожидания запросов на соединение 5
+	if (listen(S, 5) == INVALID_SOCKET)
+	{
+		fprintf(stderr, "Can't listen\n");
+		exit(1);
+	}
+	printf("Server listen on %s:%d\n",
+		inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
+	// Основной цикл обработки подключения клиентов
+	while (!bTerminate)
+	{
+		printf("Wait for connections.....\n");
+		sockaddr_in clnt_addr;
+		int addrlen = sizeof(clnt_addr);
+		memset(&clnt_addr, 0, sizeof(clnt_addr));
+		// Переводим сервис в режим ожидания запроса на соединение.
+		// Вызов синхронный, т.е. возвращает управление только при
+		// подключении клиента или ошибке
+		NS = accept(S, (sockaddr*)&clnt_addr, &addrlen);
+		if (NS == INVALID_SOCKET)
+		{
+			fprintf(stderr, "Can't accept connection\n");
+			break;
+		}
+		// Получаем параметры присоединенного сокета NS и
+		// информацию о клиенте
+		addrlen = sizeof(serv_addr);
+		getsockname(NS, (sockaddr*)&serv_addr, &addrlen);
+		// Функция inet_ntoa возвращает указатель на глобальный буффер,
+		// поэтому использовать ее в одном вызове printf не получится
+		printf("Accepted connection on %s:%d ",
+			inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
+		printf("from client %s:%d\n",
+			inet_ntoa(clnt_addr.sin_addr), ntohs(clnt_addr.sin_port));
+		// Отсылаем вводную информацию о сервере
+		send_string(NS, "* * * Welcome to simple UPCASE TCP-server * * *\r\n");
+		//
+		char sReceiveBuffer[1024] = { 0 };
+		// Получаем и обрабатываем данные от клиента
+		while (true)
+		{
+			int nReaded = recv(NS, sReceiveBuffer, sizeof(sReceiveBuffer) - 1, 0);
+			// В случае ошибки (например, отсоединения клиента) выходим
+			if (nReaded <= 0) break;
+			// Мы получаем поток байт, поэтому нужно самостоятельно
+			// добавить завержающий 0 для ASCII строки
+			sReceiveBuffer[nReaded] = 0;
+			// Отбрасываем символы превода строк
+			for (char* pPtr = sReceiveBuffer; *pPtr != 0; pPtr++)
+			{
+				if (*pPtr == '\n' || *pPtr == '\r')
+				{
+					*pPtr = 0;
+					break;
+				}
+			}
+			// Пропускаем пустые строки
+			if (sReceiveBuffer[0] == 0) continue;
+			printf("Received data: %s\n", sReceiveBuffer);
+			// Анализируем полученные команды или преобразуем текст в верхний регистр
+			if (strcmp(sReceiveBuffer, "info") == 0)
+			{
+				send_string(NS, "Semenov Ivan Alexandrovi4.\r\n");
+			}
+			else if (strcmp(sReceiveBuffer, "task") == 0)
+			{
+				send_string(NS, "variant-18. The sum of all the numbers up to the one you entered.\r\n");
+				while (true) {
+					int nReaded = recv(NS, sReceiveBuffer, sizeof(sReceiveBuffer) - 1, 0);
+					if (nReaded <= 0) break;
+					sReceiveBuffer[nReaded] = 0;
+					for (char* pPtr = sReceiveBuffer; *pPtr != 0; pPtr++)
+					{
+						if (*pPtr == '\n' || *pPtr == '\r')
+						{
+							*pPtr = 0;
+							break;
+						}
+					}
+					if (strcmp(sReceiveBuffer, "break") == 0) {
+						break;
+					}
+					else {
+						str = sReceiveBuffer;
+						if (str != "") {
+							itoa(summ(convertTo_Int(str)), buffer, 10);
+							str = "The sum of all the numbers up to the one you entered = ";
+							str += buffer;
+							str += "\r\n";
+							send_string(NS, str.c_str());
+						}
+					}
+					
+				}
+
+			}
+			else if (strcmp(sReceiveBuffer, "time") == 0)
+			{
+				ltm = localtime(&now);
+				time_now = "System time : ";
+				itoa(ltm->tm_mday, buffer, 10);
+				time_now += buffer; time_now += "/";
+				itoa(1 + ltm->tm_mon, buffer, 10);
+				time_now += buffer; time_now += "/";
+				itoa(1900 + ltm->tm_year, buffer, 10);
+				time_now += buffer; time_now += " ";
+				itoa(1 + ltm->tm_hour, buffer, 10);
+				time_now += buffer; time_now += ":"; 
+				itoa(ltm->tm_min, buffer, 10);
+				time_now += buffer;
+				time_now += "\r\n";
+				send_string(NS, time_now.c_str());
+			}
+			else if (strcmp(sReceiveBuffer, "shutdown") == 0)
+			{
+				send_string(NS, "Server go to shutdown.\r\n");
+				Sleep(200);
+				bTerminate = true;
+				break;
+			}
+			else if (strcmp(sReceiveBuffer, "exit") == 0)
+			{
+				send_string(NS, "Bye...\r\n");
+				printf("Client initialize disconnection.\r\n");
+				break;
+			}
+			else
+			{
+				// Преобразовываем строку в верхний регистр
+				char sSendBuffer[1024];
+				_snprintf(sSendBuffer, sizeof(sSendBuffer), "Server reply: %s\r\n",
+					strupr(sReceiveBuffer));
+				send_string(NS, sSendBuffer);
+			}
+		}
+		// закрываем присоединенный сокет
+		closesocket(NS);
+		printf("Client disconnected.\n");
+	}
+	// Закрываем серверный сокет
+	closesocket(S);
+	// освобождаем ресурсы библиотеки сокетов
+	WSACleanup();
+	return 0;
 }
-
-
-//stupr				преобразовать в верхний регистр
-//gethostname		получить имя текущей машины
-//ZeroMemory		очичтить память
+// Функция отсылки текстовой ascii строки клиенту
+int send_string(SOCKET s, const char* sString)
+{
+	return send(s, sString, strlen(sString), 0);
+}
