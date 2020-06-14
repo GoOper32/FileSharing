@@ -1,0 +1,2 @@
+C:\Users\vipgo\source\repos\FTP-Client\Debug\FTP-Client.exe
+C:\Users\vipgo\source\repos\FTP-Client\Debug\FTP-Client.pdb

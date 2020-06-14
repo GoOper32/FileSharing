@@ -1,0 +1,7 @@
+﻿  Source.cpp
+C:\Users\vipgo\source\repos\FTP-Client\Source.cpp(79,20): warning C4018: <: несоответствие типов со знаком и без знака
+C:\Users\vipgo\source\repos\FTP-Client\Source.cpp(104,20): warning C4018: <: несоответствие типов со знаком и без знака
+C:\Users\vipgo\source\repos\FTP-Client\Source.cpp(156,12): warning C4244: аргумент: преобразование "time_t" в "unsigned int", возможна потеря данных
+C:\Users\vipgo\source\repos\FTP-Client\Source.cpp(176,7): warning C4101: buff: неиспользованная локальная переменная
+C:\Users\vipgo\source\repos\FTP-Client\Source.cpp(447,20): warning C4018: <: несоответствие типов со знаком и без знака
+  FTP-Client.vcxproj -> C:\Users\vipgo\source\repos\FTP-Client\Debug\FTP-Client.exe
